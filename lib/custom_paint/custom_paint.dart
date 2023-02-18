@@ -14,12 +14,19 @@ class _CustomPaintWidgetState extends State<CustomPaintWidget> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: Container(
+        child: SizedBox(
           width: 100,
           height: 100,
-          decoration: BoxDecoration(border: Border.all(color: Colors.red)),
-          child: CustomPaint(
-            painter: MyPainter(),
+          child: RadialPercentWidget(
+            percent: 0.72,
+            feelColor: Colors.blue,
+            lineColor: Colors.red,
+            freeColor: Colors.yellow,
+            lineWidth: 5,
+            child: Text(
+              '72%',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ),
       ),
@@ -27,64 +34,146 @@ class _CustomPaintWidgetState extends State<CustomPaintWidget> {
   }
 }
 
+class RadialPercentWidget extends StatelessWidget {
+  final Widget child;
+
+  final double percent;
+  // - цвет заднего фона
+  final Color feelColor;
+  //цвет линии/дуги
+  final Color lineColor;
+  //цвет оставшейся части дуги
+  final Color freeColor;
+  //толщина дуги
+  final double lineWidth;
+
+  const RadialPercentWidget(
+      {Key? key,
+      required this.child,
+      required this.percent,
+      required this.feelColor,
+      required this.lineColor,
+      required this.freeColor,
+      required this.lineWidth})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        CustomPaint(
+          painter: MyPainter(
+              percent: percent,
+              feelColor: feelColor,
+              lineColor: lineColor,
+              lineWidth: lineWidth,
+              freeColor: freeColor),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(11.0),
+          child: Center(child: child),
+        )
+      ],
+    );
+  }
+}
+
 class MyPainter extends CustomPainter {
+  final double percent;
+  // - цвет заднего фона
+  final Color feelColor;
+  //цвет линии/дуги
+  final Color lineColor;
+  //цвет оставшейся части дуги
+  final Color freeColor;
+  //толщина дуги
+  final double lineWidth;
 //для отрисовки дуги
 //добавляем переменную, которая будет обозначать процент от всего круга
 // 1.0 - полный круг, 0.5 - полкруга и так далее
 //инициализируем со значением 0,72
 
-  final double percent = 0.72;
+  //final double percent = 0.72;
+
+  MyPainter(
+      {required this.percent,
+      required this.feelColor,
+      required this.lineColor,
+      required this.freeColor,
+      required this.lineWidth});
   @override
   void paint(Canvas canvas, Size size) {
+    Rect arcRect = calculateArcsRect(size);
 //рисуем индикатор на черном фоне
 
 //рисуем фон
+    drawBackground(canvas, size);
+
+// рисуем оставшуюся часть дуги, которая будет другим цветом
+    drawFreeArc(canvas, arcRect);
+
+// рисуем дугу
+    drawFilledArc(canvas, arcRect);
+  }
+
+  void drawFilledArc(Canvas canvas, Rect arcRect) {
+    final feelPaint = Paint();
+    feelPaint.color = freeColor;
+    feelPaint.style = PaintingStyle.stroke;
+    feelPaint.strokeWidth = lineWidth;
+    feelPaint.strokeCap = StrokeCap.round;
+
+    //рисуем дугу
+    //canvas.drawArc(rect, startAngle, sweepAngle, useCenter, paint)
+    //rect - Offset.zero & size
+    //
+    //Arc здесь работает в радианах, если градусы у круга от 0 до 360
+    // то в Пи 0 до 2Пи
+    //а радианы от 0 до ~6,3
+    //мы  выставим для нашей дуги начальную точку startAngle 0
+    //конечную точку на окружности sweepAngle 3,14 (pi)
+    //
+    //useCenter - false
+    canvas.drawArc(arcRect, -pi / 2, pi * 2 * percent, false, feelPaint);
+  }
+
+  void drawFreeArc(Canvas canvas, Rect arcRect) {
+    final filledPaint = Paint();
+    filledPaint.color = lineColor;
+    filledPaint.style = PaintingStyle.stroke;
+    filledPaint.strokeWidth = lineWidth;
+    //смещение оставляем такое же как и у зеленой дуги
+    // начальная точка должна быть концом зеленой дуги pi * 2 * percent
+    //конечное положение дуги определяется не точкой, а длиной
+    // то есть если мы укажем Пи, то конец дуги не окажется в точке Пи,
+    // а продлится на длину Пи, на 180 градусов, или на полкруга,
+    //если поставить sweepAngle (конец дуги) 2Пи, то дуга будет по всей окружности
+    canvas.drawArc(arcRect, (3 * pi / 2) + (pi * 2 * percent),
+        pi * 2 * (1 - percent), false, filledPaint);
+  }
+
+  void drawBackground(Canvas canvas, Size size) {
     final backgroundPaint = Paint();
-    backgroundPaint.color = Colors.black;
+    backgroundPaint.color = feelColor;
     backgroundPaint.style = PaintingStyle.fill;
-//нарисовали черный круг, который полностью вписался в квадрат(наш конт.)
+    //нарисовали черный круг, который полностью вписался в квадрат(наш конт.)
     // canvas.drawCircle(
     //     Offset(size.width / 2, size.height / 2), size.width / 2, paint);
 
-//вместо canvas.drawCircle можно использовать canvas.drawOval(rect, paint)
-//здесь мы привяжем размер квадрата(конт.) с размером овала
-//так как овал принимает rect
-//и если мы изменим, например высоту квадрата, то и овал также изменится
+    //вместо canvas.drawCircle можно использовать canvas.drawOval(rect, paint)
+    //здесь мы привяжем размер квадрата(конт.) с размером овала
+    //так как овал принимает rect
+    //и если мы изменим, например высоту квадрата, то и овал также изменится
     canvas.drawOval(Offset.zero & size, backgroundPaint);
+  }
 
-// рисуем дугу
-    final feelPaint = Paint();
-    feelPaint.color = Colors.green;
-    feelPaint.style = PaintingStyle.stroke;
-    feelPaint.strokeWidth = 5;
-
-    //рисуем дугу
-//canvas.drawArc(rect, startAngle, sweepAngle, useCenter, paint)
-//rect - Offset.zero & size
-//
-//Arc здесь работает в радианах, если градусы у круга от 0 до 360
-// то в Пи 0 до 2Пи
-//а радианы от 0 до ~6,3
-//мы  выставим для нашей дуги начальную точку startAngle 0
-//конечную точку на окружности sweepAngle 3,14 (pi)
-//
-//useCenter - false
-    canvas.drawArc(Offset(2.5, 2.5) & Size(size.width - 5, size.height - 5),
-        -pi / 2, pi * 2 * percent, false, feelPaint);
-
-// рисуем оставшуюся часть дуги, которая будет другим цветом
-    final filledPaint = Paint();
-    filledPaint.color = Colors.yellow;
-    filledPaint.style = PaintingStyle.stroke;
-    filledPaint.strokeWidth = 5;
-//смещение оставляем такое же как и у зеленой дуги
-// начальная точка должна быть концом зеленой дуги pi * 2 * percent
-    canvas.drawArc(
-        Offset(2.5, 2.5) & Size(size.width - 5, size.height - 5),
-        (3 * pi / 2) + (pi * 2 * percent),
-        pi * 2 * (1 - percent),
-        false,
-        filledPaint);
+  Rect calculateArcsRect(Size size) {
+    final linesMargin = 3;
+    final offset = lineWidth / 2 + linesMargin;
+    final arcRect = Offset(offset, offset) &
+        Size(size.width - offset * 2, size.height - offset * 2);
+    return arcRect;
   }
 
   void myPaint(Canvas canvas, Size size) {

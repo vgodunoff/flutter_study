@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'inherit/ex_communicate_inherited.dart';
+import 'inherit/ex_communicate_inherited_notifier.dart';
 
-import 'custom_paint/custom_paint.dart';
+// import 'custom_paint/custom_paint.dart';
+// import 'inherit/ex_inherited.dart';
+// import 'inherit/ex_inherited_model.dart';
 // import 'package:flutter_study/ex_user_info/app.dart';
 // import 'package:flutter_study/layout_understanding/Alignment/alignment_wdgt.dart';
 // import 'package:flutter_study/layout_understanding/container_layout_behaviour/example1.dart';
@@ -33,7 +37,7 @@ import 'custom_paint/custom_paint.dart';
 
 void main() {
   final app = MaterialApp(
-    home: CustomPaintWidget(),
+    home: ExIngeritedNotifier(),
   );
 
   runApp(app);
